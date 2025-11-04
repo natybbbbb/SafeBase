@@ -2,34 +2,36 @@ import { ethers, upgrades, network } from "hardhat";
 import fs from "fs";
 import path from "path";
 
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function main() {
   const [deployer] = await ethers.getSigners();
 
   const balance = await ethers.provider.getBalance(deployer.address);
   const fee = await ethers.provider.getFeeData();
-  const envMaxFee = process.env.MAX_FEE_PER_GAS_GWEI ? ethers.parseUnits(process.env.MAX_FEE_PER_GAS_GWEI, "gwei") : fee.maxFeePerGas ?? 0n;
-  const envPriority = process.env.MAX_PRIORITY_FEE_PER_GAS_GWEI ? ethers.parseUnits(process.env.MAX_PRIORITY_FEE_PER_GAS_GWEI, "gwei") : fee.maxPriorityFeePerGas ?? 0n;
 
   console.log(`Network: ${network.name}`);
   console.log(`Deployer: ${deployer.address}`);
   console.log(`Balance: ${ethers.formatEther(balance)} ETH`);
-  console.log(`Fee max: ${ethers.formatUnits(envMaxFee, "gwei")} gwei, priority: ${ethers.formatUnits(envPriority, "gwei")} gwei`);
+  console.log(
+    `Fee max: ${fee.maxFeePerGas ? ethers.formatUnits(fee.maxFeePerGas, "gwei") : "n/a"} gwei, ` +
+    `priority: ${fee.maxPriorityFeePerGas ? ethers.formatUnits(fee.maxPriorityFeePerGas, "gwei") : "n/a"} gwei`
+  );
 
   if (balance === 0n) {
-    throw new Error("Deployer balance is 0. Fund the address with ETH on Base mainnet.");
+    throw new Error("Deployer balance is 0. Fund the address with ETH on the target network.");
   }
 
   const SafeBase = await ethers.getContractFactory("SafeBase");
-
-  const proxy = await upgrades.deployProxy(
-    SafeBase,
-    [0, deployer.address],
-    { kind: "uups", txOverrides: { maxFeePerGas: envMaxFee, maxPriorityFeePerGas: envPriority } as any }
-  );
-
+  const proxy = await upgrades.deployProxy(SafeBase, [0, deployer.address], { kind: "uups" });
   await proxy.waitForDeployment();
+
   const deployTx = proxy.deploymentTransaction();
-  if (deployTx) await deployTx.wait(2);
+  if (deployTx) {
+    await deployTx.wait(2);
+  }
 
   const proxyAddress = await proxy.getAddress();
 
@@ -41,13 +43,14 @@ async function main() {
       adminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
       if (implAddress && implAddress !== ethers.ZeroAddress) break;
     } catch {}
-    await new Promise((r) => setTimeout(r, 2000));
+    await sleep(2000);
   }
+
   if (!implAddress || implAddress === ethers.ZeroAddress) {
     throw new Error(`Implementation address is empty for proxy ${proxyAddress} after retries`);
   }
 
-  const file = path.join("deployments", `${network.name}.json");
+  const file = path.join("deployments", `${network.name}.json`);
   const { chainId } = await ethers.provider.getNetwork();
   const record = {
     network: network.name,
