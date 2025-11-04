@@ -7,14 +7,7 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "outDir": "dist",
-    "types": [
-      "node",
-      "mocha"
-    ]
+    "types": ["node", "mocha", "hardhat"]
   },
-  "include": [
-    "./scripts",
-    "./test",
-    "./typechain-types"
-  ]
+  "include": ["./scripts", "./test", "./typechain-types", "./hardhat.config.ts"]
 }
