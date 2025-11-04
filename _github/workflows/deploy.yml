@@ -1,0 +1,70 @@
+name: Deploy (Base / Base Sepolia)
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: "Target network (base or base_sepolia)"
+        default: "base_sepolia"
+        required: true
+        type: choice
+        options:
+          - base
+          - base_sepolia
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure env
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> .env
+          if [ '${{ github.event.inputs.network }}' = 'base' ]; then
+            echo "RPC_URL_BASE=${{ secrets.RPC_URL_BASE }}" >> .env
+          else
+            echo "RPC_URL_BASE_SEPOLIA=${{ secrets.RPC_URL_BASE_SEPOLIA }}" >> .env
+          fi
+          echo "BASESCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
+
+      - name: Deploy
+        run: npm run deploy:${{ github.event.inputs.network == 'base' && 'base' || 'base-sepolia' }}
+
+      - name: Verify implementation on Basescan
+        run: |
+          if [ '${{ github.event.inputs.network }}' = 'base' ]; then
+            npm run verify:impl
+          else
+            npm run verify:impl:sepolia
+          fi
+
+      - name: Upload deployments file
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployments-${{ github.event.inputs.network }}
+          path: deployments/${{ github.event.inputs.network }}.json

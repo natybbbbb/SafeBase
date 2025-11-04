@@ -1,0 +1,21 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Env
+.env
+
+# Hardhat
+cache/
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deployments (kept, but you can ignore if large)
+# deployments/*.json
