@@ -34,7 +34,7 @@ jobs:
           else
             echo "RPC_URL_BASE_SEPOLIA=${{ secrets.RPC_URL_BASE_SEPOLIA }}" >> .env
           fi
-          echo "BASESCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
+          echo "ETHERSCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
       - name: Deploy
         run: npm run deploy:${{ github.event.inputs.network == 'base' && 'base' || 'base-sepolia' }}
       - name: Verify implementation on Basescan
