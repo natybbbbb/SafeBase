@@ -8,18 +8,14 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 contract SafeBaseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint256 private _value;
 
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initializeV2() public reinitializer(2) {
-        _value = _value + 1;
-    }
-
     function initialize(uint256 initialValue, address owner_) public initializer {
         __Ownable_init(owner_);
         __UUPSUpgradeable_init();
         _value = initialValue;
+    }
+
+    function initializeV2() public reinitializer(2) {
+        _value = _value + 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
