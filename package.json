@@ -10,7 +10,9 @@
     "deploy:base": "hardhat run scripts/deploy.ts --network base",
     "deploy:base-sepolia": "hardhat run scripts/deploy.ts --network base_sepolia",
     "verify:impl": "hardhat run scripts/verify-impl.ts --network base",
-    "verify:impl:sepolia": "hardhat run scripts/verify-impl.ts --network base_sepolia"
+    "verify:impl:sepolia": "hardhat run scripts/verify-impl.ts --network base_sepolia",
+    "upgrade:base": "hardhat run scripts/upgrade.ts --network base",
+    "upgrade:base-sepolia": "hardhat run scripts/upgrade.ts --network base_sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
