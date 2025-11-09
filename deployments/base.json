@@ -1,8 +1,4 @@
 {
-  "network": "base",
-  "chainId": "8453",
   "proxy": "0xf21DBb14FEa9F721ea9078580De653d68023465d",
-  "implementation": "0xAe91524fe801a69084d7328D279606F8f8Fe9949",
-  "admin": "0x0000000000000000000000000000000000000000",
-  "deployedAt": "2025-11-04T20:32:00Z"
+  "implementation": "0xAe91524fe801a69084d7328D279606F8f8Fe9949"
 }
