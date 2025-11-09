@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { getAddress } from "ethers";
 import fs from "fs";
 import path from "path";
 
@@ -14,19 +15,18 @@ async function main() {
   let proxy = String(data.proxy || data.address || "").trim().replace(/^"+|"+$/g, "");
   if (proxy.startsWith('"') && proxy.endsWith('"')) proxy = proxy.slice(1, -1);
 
+  let proxyAddr;
   try {
-    proxy = ethers.getAddress(proxy);
+    proxyAddr = getAddress(proxy);
   } catch {
     throw new Error(`invalid proxy address: ${proxy}`);
   }
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
-  const upgraded = await upgrades.upgradeProxy(proxy, Impl);
+  const upgraded = await upgrades.upgradeProxy(proxyAddr, Impl);
   await upgraded.waitForDeployment();
 
-  const proxyAddr = await upgraded.getAddress();
   const implAddr = await upgrades.erc1967.getImplementationAddress(proxyAddr);
-
   fs.writeFileSync(file, JSON.stringify({ proxy: proxyAddr, implementation: implAddr }, null, 2));
 
   if ("initializeV2" in (upgraded as any)) {
