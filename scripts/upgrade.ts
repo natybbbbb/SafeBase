@@ -1,41 +1,50 @@
-import { ethers, upgrades, network } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import fs from "fs";
 import path from "path";
 
 async function main() {
-  const file = path.join("deployments", network.name + ".json");
+  const network = (process.env.HARDHAT_NETWORK || "").trim() || (await ethers.provider.getNetwork()).name;
+  const deploymentsDir = path.join(process.cwd(), "deployments");
+  const file = path.join(deploymentsDir, `${network}.json`);
+
   if (!fs.existsSync(file)) {
-    throw new Error("Deployments file not found: " + file);
-  }
-  const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  const proxy = data.proxy as string;
-  if (!proxy) {
-    throw new Error("Proxy address is missing in " + file);
+    throw new Error(`deployments file not found: ${file}`);
   }
 
-  const Factory = await ethers.getContractFactory("SafeBaseV2");
-  const nextImpl = await upgrades.prepareUpgrade(proxy, Factory, { kind: "uups" });
+  const raw = fs.readFileSync(file, "utf8");
+  const data = JSON.parse(raw);
 
-  const implTx = await upgrades.upgradeProxy(proxy, Factory, { kind: "uups" });
-  await implTx.waitForDeployment();
+  let proxy: string =
+    String(data.proxy || data.proxyAddress || data.address || "").trim();
 
-  const implAddr = await upgrades.erc1967.getImplementationAddress(proxy);
+  if (!proxy || !ethers.isAddress(proxy)) {
+    throw new Error(`invalid proxy address in ${file}: "${proxy}"`);
+  }
 
-  const record = {
-    ...data,
+  const Impl = await ethers.getContractFactory("SafeBaseV2");
+  const upgraded = await upgrades.upgradeProxy(proxy, Impl);
+  await upgraded.waitForDeployment();
+
+  const proxyAddr = await upgraded.getAddress();
+  const implAddr = await upgrades.erc1967.getImplementationAddress(proxyAddr);
+
+  const out = {
+    proxy: proxyAddr,
     implementation: implAddr,
-    upgradedAt: new Date().toISOString()
   };
-  fs.writeFileSync(file, JSON.stringify(record, null, 2));
 
-  const v2 = await ethers.getContractAt("SafeBaseV2", proxy);
-  try {
-    const tx = await v2.initializeV2();
-    await tx.wait(1);
-  } catch {}
+  fs.mkdirSync(deploymentsDir, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n", "utf8");
 
-  console.log("Proxy:", proxy);
-  console.log("Implementation:", implAddr);
+  if ("initializeV2" in (upgraded as any)) {
+    try {
+      const tx = await (upgraded as any).initializeV2();
+      await tx.wait();
+    } catch {}
+  }
+
+  console.log(`proxy: ${proxyAddr}`);
+  console.log(`implementation: ${implAddr}`);
 }
 
 main().catch((e) => {
