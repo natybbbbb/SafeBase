@@ -7,15 +7,15 @@ async function main() {
   const network = (process.env.HARDHAT_NETWORK || "").trim() || (await ethers.provider.getNetwork()).name;
   const deploymentsDir = path.join(process.cwd(), "deployments");
   const file = path.join(deploymentsDir, `${network}.json`);
-
   if (!fs.existsSync(file)) throw new Error(`deployments file not found: ${file}`);
+
   const raw = fs.readFileSync(file, "utf8").trim();
   const data = JSON.parse(raw);
 
-  let proxy = String(data.proxy || data.address || "").trim().replace(/^"+|"+$/g, "");
+  let proxy = String(data.proxy || "").trim().replace(/^"+|"+$/g, "");
   if (proxy.startsWith('"') && proxy.endsWith('"')) proxy = proxy.slice(1, -1);
 
-  let proxyAddr;
+  let proxyAddr: string;
   try {
     proxyAddr = getAddress(proxy);
   } catch {
@@ -23,6 +23,13 @@ async function main() {
   }
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
+
+  try {
+    await upgrades.erc1967.getImplementationAddress(proxyAddr);
+  } catch {
+    await upgrades.forceImport(proxyAddr, Impl, { kind: "uups" });
+  }
+
   const upgraded = await upgrades.upgradeProxy(proxyAddr, Impl);
   await upgraded.waitForDeployment();
 
