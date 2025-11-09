@@ -13,28 +13,35 @@ async function main() {
   const data = JSON.parse(raw);
 
   let proxy = String(data.proxy || "").trim().replace(/^"+|"+$/g, "");
-  if (proxy.startsWith('"') && proxy.endsWith('"')) proxy = proxy.slice(1, -1);
+  let implHint = String(data.implementation || "").trim().replace(/^"+|"+$/g, "");
 
-  let proxyAddr: string;
-  try {
-    proxyAddr = getAddress(proxy);
-  } catch {
-    throw new Error(`invalid proxy address: ${proxy}`);
+  let proxyAddr: string | null = null;
+  let implAddrHint: string | null = null;
+
+  try { proxyAddr = getAddress(proxy); } catch { throw new Error(`invalid proxy address: ${proxy}`); }
+  try { implAddrHint = implHint ? getAddress(implHint) : null; } catch { implAddrHint = null; }
+
+  if (implAddrHint && proxyAddr.toLowerCase() === implAddrHint.toLowerCase()) {
+    throw new Error(`proxy address equals implementation address: ${proxyAddr}`);
   }
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
 
+  let needsImport = false;
   try {
     await upgrades.erc1967.getImplementationAddress(proxyAddr);
   } catch {
+    needsImport = true;
+  }
+  if (needsImport) {
     await upgrades.forceImport(proxyAddr, Impl, { kind: "uups" });
   }
 
   const upgraded = await upgrades.upgradeProxy(proxyAddr, Impl);
   await upgraded.waitForDeployment();
 
-  const implAddr = await upgrades.erc1967.getImplementationAddress(proxyAddr);
-  fs.writeFileSync(file, JSON.stringify({ proxy: proxyAddr, implementation: implAddr }, null, 2));
+  const newImpl = await upgrades.erc1967.getImplementationAddress(proxyAddr);
+  fs.writeFileSync(file, JSON.stringify({ proxy: proxyAddr, implementation: newImpl }, null, 2));
 
   if ("initializeV2" in (upgraded as any)) {
     try {
@@ -44,7 +51,7 @@ async function main() {
   }
 
   console.log(`Proxy: ${proxyAddr}`);
-  console.log(`Implementation: ${implAddr}`);
+  console.log(`Implementation: ${newImpl}`);
 }
 
 main().catch((e) => {
