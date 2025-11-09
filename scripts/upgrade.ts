@@ -10,10 +10,15 @@ async function main() {
   if (!fs.existsSync(file)) throw new Error(`deployments file not found: ${file}`);
   const raw = fs.readFileSync(file, "utf8").trim();
   const data = JSON.parse(raw);
-  let proxy = String(data.proxy || data.address || "").trim().replace(/^"+|"+$/g, "");
 
+  let proxy = String(data.proxy || data.address || "").trim().replace(/^"+|"+$/g, "");
   if (proxy.startsWith('"') && proxy.endsWith('"')) proxy = proxy.slice(1, -1);
-  if (!ethers.isAddress(proxy)) throw new Error(`invalid proxy address: ${proxy}`);
+
+  try {
+    proxy = ethers.getAddress(proxy);
+  } catch {
+    throw new Error(`invalid proxy address: ${proxy}`);
+  }
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
   const upgraded = await upgrades.upgradeProxy(proxy, Impl);
