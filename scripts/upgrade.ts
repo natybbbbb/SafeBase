@@ -12,31 +12,27 @@ async function main() {
   const raw = fs.readFileSync(file, "utf8").trim();
   const data = JSON.parse(raw);
 
-  let proxy = String(data.proxy || "").trim().replace(/^"+|"+$/g, "");
-  let implHint = String(data.implementation || "").trim().replace(/^"+|"+$/g, "");
+  const rawProxy = String(data.proxy || "").trim();
+  if (!rawProxy) throw new Error(`proxy address missing in ${file}`);
 
-  let proxyAddr: string | null = null;
-  let implAddrHint: string | null = null;
+  let proxyAddr: string;
+  try { proxyAddr = getAddress(rawProxy); } catch { throw new Error(`invalid proxy address: ${rawProxy}`); }
 
-  try { proxyAddr = getAddress(proxy); } catch { throw new Error(`invalid proxy address: ${proxy}`); }
-  try { implAddrHint = implHint ? getAddress(implHint) : null; } catch { implAddrHint = null; }
-
-  if (implAddrHint && proxyAddr.toLowerCase() === implAddrHint.toLowerCase()) {
-    throw new Error(`proxy address equals implementation address: ${proxyAddr}`);
+  const implHint = data.implementation ? String(data.implementation).trim() : "";
+  try {
+    const implFromProxy = await upgrades.erc1967.getImplementationAddress(proxyAddr);
+    if (implHint && getAddress(implHint) === getAddress(proxyAddr)) {
+      throw new Error(`proxy address equals implementation in ${file}`);
+    }
+    if (implHint && getAddress(implHint) !== getAddress(implFromProxy)) {
+      fs.writeFileSync(file, JSON.stringify({ proxy: proxyAddr, implementation: implFromProxy }, null, 2));
+    }
+  } catch {
+    const ImplProbe = await ethers.getContractFactory("SafeBaseV2");
+    await upgrades.forceImport(proxyAddr, ImplProbe, { kind: "uups" });
   }
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
-
-  let needsImport = false;
-  try {
-    await upgrades.erc1967.getImplementationAddress(proxyAddr);
-  } catch {
-    needsImport = true;
-  }
-  if (needsImport) {
-    await upgrades.forceImport(proxyAddr, Impl, { kind: "uups" });
-  }
-
   const upgraded = await upgrades.upgradeProxy(proxyAddr, Impl);
   await upgraded.waitForDeployment();
 
