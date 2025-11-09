@@ -32,7 +32,10 @@ contract SafeBaseV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _value = initialValue;
     }
 
-    function initializeV2() public reinitializer(2) {}
+    
+    function initializeV2() public reinitializer(2) {
+        _value = 1;
+    }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
