@@ -7,19 +7,13 @@ async function main() {
   const deploymentsDir = path.join(process.cwd(), "deployments");
   const file = path.join(deploymentsDir, `${network}.json`);
 
-  if (!fs.existsSync(file)) {
-    throw new Error(`deployments file not found: ${file}`);
-  }
-
-  const raw = fs.readFileSync(file, "utf8");
+  if (!fs.existsSync(file)) throw new Error(`deployments file not found: ${file}`);
+  const raw = fs.readFileSync(file, "utf8").trim();
   const data = JSON.parse(raw);
+  let proxy = String(data.proxy || data.address || "").trim().replace(/^"+|"+$/g, "");
 
-  let proxy: string =
-    String(data.proxy || data.proxyAddress || data.address || "").trim();
-
-  if (!proxy || !ethers.isAddress(proxy)) {
-    throw new Error(`invalid proxy address in ${file}: "${proxy}"`);
-  }
+  if (proxy.startsWith('"') && proxy.endsWith('"')) proxy = proxy.slice(1, -1);
+  if (!ethers.isAddress(proxy)) throw new Error(`invalid proxy address: ${proxy}`);
 
   const Impl = await ethers.getContractFactory("SafeBaseV2");
   const upgraded = await upgrades.upgradeProxy(proxy, Impl);
@@ -28,13 +22,7 @@ async function main() {
   const proxyAddr = await upgraded.getAddress();
   const implAddr = await upgrades.erc1967.getImplementationAddress(proxyAddr);
 
-  const out = {
-    proxy: proxyAddr,
-    implementation: implAddr,
-  };
-
-  fs.mkdirSync(deploymentsDir, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n", "utf8");
+  fs.writeFileSync(file, JSON.stringify({ proxy: proxyAddr, implementation: implAddr }, null, 2));
 
   if ("initializeV2" in (upgraded as any)) {
     try {
@@ -43,8 +31,8 @@ async function main() {
     } catch {}
   }
 
-  console.log(`proxy: ${proxyAddr}`);
-  console.log(`implementation: ${implAddr}`);
+  console.log(`Proxy: ${proxyAddr}`);
+  console.log(`Implementation: ${implAddr}`);
 }
 
 main().catch((e) => {
