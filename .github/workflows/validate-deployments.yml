@@ -7,15 +7,12 @@ on:
   push:
     paths:
       - "deployments/*.json"
-      - "scripts/validate-deployments.ts"
+      - "scripts/validate-deployments.js"
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci --no-audit --no-fund
-      - run: npx ts-node scripts/validate-deployments.ts
+      - name: Validate
+        run: node scripts/validate-deployments.js
