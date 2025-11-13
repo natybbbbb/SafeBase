@@ -1,0 +1,68 @@
+name: Upgrade to V3 (Base / Base Sepolia)
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: Target network (base or base_sepolia)
+        default: base_sepolia
+        required: true
+        type: choice
+        options:
+          - base
+          - base_sepolia
+
+jobs:
+  upgrade-v3:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      
+      - name: Build contracts
+        run: npm run build
+      
+      - name: Configure environment
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> .env
+          if [ '${{ github.event.inputs.network }}' = 'base' ]; then
+            echo "RPC_URL_BASE=${{ secrets.RPC_URL_BASE }}" >> .env
+          else
+            echo "RPC_URL_BASE_SEPOLIA=${{ secrets.RPC_URL_BASE_SEPOLIA }}" >> .env
+          fi
+          echo "ETHERSCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
+      
+      - name: Upgrade to V3
+        run: npm run upgrade-v3:${{ github.event.inputs.network == 'base' && 'base' || 'base-sepolia' }}
+      
+      - name: Verify new implementation
+        run: |
+          if [ '${{ github.event.inputs.network }}' = 'base' ]; then
+            npm run verify:impl
+          else
+            npm run verify:impl:sepolia
+          fi
+        continue-on-error: true
+      
+      - name: Commit deployment updates
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add deployments/${{ github.event.inputs.network }}.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: upgrade to v3 on ${{ github.event.inputs.network }}"
+          git push
+        continue-on-error: true
+      
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployments-v3-${{ github.event.inputs.network }}
+          path: deployments/${{ github.event.inputs.network }}.json

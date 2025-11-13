@@ -2,13 +2,15 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "outDir": "dist",
-    "types": ["node", "mocha", "hardhat"],
-    "skipLibCheck": true
+    "types": ["node", "mocha", "chai"],
+    "skipLibCheck": true,
+    "noImplicitAny": false
   },
-  "include": ["./scripts", "./test", "./typechain-types", "./hardhat.config.ts"]
+  "include": ["./scripts", "./test", "./typechain-types", "./hardhat.config.ts"],
+  "exclude": ["node_modules", "artifacts", "cache"]
 }

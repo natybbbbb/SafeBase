@@ -28,7 +28,9 @@
     "verify:impl": "hardhat run scripts/verify-impl.ts --network base",
     "verify:impl:sepolia": "hardhat run scripts/verify-impl.ts --network base_sepolia",
     "upgrade:base": "hardhat run scripts/upgrade.ts --network base",
-    "upgrade:base-sepolia": "hardhat run scripts/upgrade.ts --network base_sepolia"
+    "upgrade:base-sepolia": "hardhat run scripts/upgrade.ts --network base_sepolia",
+    "upgrade-v3:base": "hardhat run scripts/upgrade-v3.ts --network base",
+    "upgrade-v3:base-sepolia": "hardhat run scripts/upgrade-v3.ts --network base_sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

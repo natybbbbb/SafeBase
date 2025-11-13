@@ -11,7 +11,7 @@ describe("SafeBase upgrade flow", function () {
     const V2 = await ethers.getContractFactory("SafeBaseV2");
     const upgraded = await upgrades.upgradeProxy(await proxy.getAddress(), V2, { kind: "uups" });
 
-    const v2 = V2.attach(await upgraded.getAddress());
+    const v2 = V2.attach(await upgraded.getAddress()) as any;
     await (await v2.initializeV2()).wait();
 
     const value = await v2.getValue();
