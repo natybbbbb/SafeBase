@@ -1,4 +1,4 @@
-name: Upgrade Proxy (Base / Base Sepolia)
+name: Upgrade to V2 (Legacy - use upgrade-v3 instead)
 
 on:
   workflow_dispatch:
