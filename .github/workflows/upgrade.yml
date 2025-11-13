@@ -1,4 +1,4 @@
-name: Upgrade to V3 (Base / Base Sepolia)
+name: Upgrade Proxy (Base / Base Sepolia)
 
 on:
   workflow_dispatch:
@@ -40,8 +40,8 @@ jobs:
           fi
           echo "ETHERSCAN_API_KEY=${{ secrets.BASESCAN_API_KEY }}" >> .env
       
-      - name: Upgrade to V3
-        run: npm run upgrade-v3:${{ github.event.inputs.network == 'base' && 'base' || 'base-sepolia' }}
+      - name: Upgrade Proxy
+        run: npm run upgrade:${{ github.event.inputs.network == 'base' && 'base' || 'base-sepolia' }}
       
       - name: Verify new implementation
         run: |
