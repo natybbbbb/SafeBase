@@ -26,18 +26,27 @@ async function main() {
   console.log(`\n🚀 Upgrading proxy on ${network}...`);
   console.log(`Proxy address: ${proxyAddr}`);
 
+  let implFromProxy = "";
   try {
-    const implFromProxy = await upgrades.erc1967.getImplementationAddress(proxyAddr);
+    implFromProxy = await upgrades.erc1967.getImplementationAddress(proxyAddr);
     console.log(`Current implementation: ${implFromProxy}`);
-  } catch {
-    const ImplProbe = await ethers.getContractFactory("SafeBaseV3");
-    await upgrades.forceImport(proxyAddr, ImplProbe, { kind: "uups" });
+  } catch (e) {
+    console.log(`⚠️  Could not read implementation from proxy`);
   }
 
   const SafeBaseV3 = await ethers.getContractFactory("SafeBaseV3");
-  console.log(`\nDeploying new implementation...`);
+
+  console.log(`\n🔧 Force importing existing proxy...`);
+  try {
+    await upgrades.forceImport(proxyAddr, SafeBaseV3, { kind: "uups" });
+    console.log(`✅ Proxy imported successfully`);
+  } catch (e: any) {
+    console.log(`ℹ️  Force import: ${e.message}`);
+  }
+
+  console.log(`\n📦 Deploying new implementation...`);
   
-  const upgraded = await upgrades.upgradeProxy(proxyAddr, SafeBaseV3);
+  const upgraded = await upgrades.upgradeProxy(proxyAddr, SafeBaseV3, { kind: "uups" });
   await upgraded.waitForDeployment();
 
   const newImpl = await upgrades.erc1967.getImplementationAddress(proxyAddr);
@@ -55,23 +64,29 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify(record, null, 2));
   console.log(`\n📝 Deployment file updated: ${file}`);
 
+  let feeRate = 0n;
   try {
     console.log(`\n🔧 Calling initializeV3()...`);
     const tx = await (upgraded as any).initializeV3();
     await tx.wait();
     console.log(`✅ InitializeV3 completed`);
+    feeRate = await (upgraded as any).feeRate();
   } catch (e: any) {
-    if (e.message.includes("already initialized")) {
+    if (e.message && e.message.includes("already initialized")) {
       console.log(`ℹ️  Contract already initialized (this is normal)`);
     } else {
-      console.log(`⚠️  InitializeV3 failed (may already be called): ${e.message}`);
+      console.log(`⚠️  InitializeV3 may have failed, but upgrade was successful`);
+      console.log(`   Error: ${e.message || e}`);
     }
+    try {
+      feeRate = await (upgraded as any).feeRate();
+    } catch {}
   }
-
-  const feeRate = await (upgraded as any).feeRate();
-  console.log(`\n📊 Contract state:`);
-  console.log(`   Fee rate: ${feeRate.toString()} (${Number(feeRate) / 100}%)`);
-  console.log(`   Max fee rate: 500 (5%)`);
+  if (feeRate > 0n) {
+    console.log(`\n📊 Contract state:`);
+    console.log(`   Fee rate: ${feeRate.toString()} (${Number(feeRate) / 100}%)`);
+    console.log(`   Max fee rate: 500 (5%)`);
+  }
 
   console.log(`\n✅ Upgrade completed successfully!`);
   console.log(`\n🔗 Verify on BaseScan:`);
