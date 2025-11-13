@@ -26,3 +26,11 @@ Thumbs.db
 deployments/*.tmp.json
 *.tmp
 *.log
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment files
+*.env
+*.env.*
