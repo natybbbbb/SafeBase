@@ -9,6 +9,7 @@ package-lock.json
 artifacts
 cache
 coverage
+typechain-types
 
 # Environment
 .env
@@ -23,50 +24,5 @@ Thumbs.db
 
 # Temporary files
 deployments/*.tmp.json
-
-# ABI exports
-abi
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+*.tmp
+*.log
